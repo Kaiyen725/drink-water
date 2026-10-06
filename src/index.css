@@ -1,0 +1,73 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  --color-dry: #d5e1e7;
+  --color-water: #0e6a80;
+  --color-plate: #f5fbfc;
+  --color-ink: #122027;
+  --color-muted: #3a515a;
+  --color-on-dry: #122027;
+  --color-on-dry-muted: #3a515a;
+  --color-glass: #052c38;
+  --color-glass-ink: #f2fbfd;
+  --color-glass-muted: #b5dbe3;
+  --color-glass-bar: #7fd6e8;
+}
+
+:root {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-dry: #10181b;
+    --color-water: #3eb4cc;
+    --color-on-dry: #e8f3f6;
+    --color-on-dry-muted: #b7cbd1;
+  }
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-dry);
+  color: var(--color-ink);
+}
+
+.tap-surface {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes bubble-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.bubble-pop {
+  animation: bubble-pop 420ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tap-plate,
+  .history-panel {
+    transition: none;
+  }
+
+  .bubble-pop {
+    animation: none;
+  }
+}
