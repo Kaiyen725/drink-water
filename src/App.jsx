@@ -8,6 +8,7 @@ import {
   QUICK_DRINKS,
   SIP_KEY,
   addSip,
+  clearSips,
   enforceCap,
   formatElapsed,
   formatWhen,
@@ -15,6 +16,7 @@ import {
   mlOnDay,
   readGoal,
   readSips,
+  removeSip,
   saveGoal,
   speakElapsed,
   tideLevel,
@@ -29,6 +31,8 @@ export default function App() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [splash, setSplash] = useState(null)
   const tapXRef = useRef(null)
+  const historyButtonRef = useRef(null)
+  const historyWasOpen = useRef(false)
 
   useEffect(() => {
     let id = 0
@@ -60,6 +64,15 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [historyOpen])
+
+  useEffect(() => {
+    if (historyOpen) {
+      historyWasOpen.current = true
+      document.getElementById('close-history')?.focus()
+      return
+    }
+    if (historyWasOpen.current) historyButtonRef.current?.focus()
   }, [historyOpen])
 
   useEffect(() => {
@@ -101,6 +114,32 @@ export default function App() {
       setGoal(saveGoal(ml))
     } catch {
       setGoal(ml)
+    }
+  }
+
+  function removeDrink(at) {
+    try {
+      setSips(removeSip(at))
+      setSaveError(false)
+      setNotice('Drink removed.')
+    } catch {
+      setSips((current) => {
+        const index = current.findIndex((sip) => sip.at === at)
+        if (index < 0) return current
+        return current.filter((_, position) => position !== index)
+      })
+      setSaveError(true)
+    }
+  }
+
+  function clearDrinks() {
+    try {
+      setSips(clearSips())
+      setSaveError(false)
+      setNotice('All drinks cleared.')
+    } catch {
+      setSips([])
+      setSaveError(true)
     }
   }
 
@@ -172,23 +211,34 @@ export default function App() {
           id="drink-history"
           inert={historyOpen ? undefined : true}
           aria-hidden={historyOpen ? undefined : true}
-          className={`history-panel fixed inset-y-0 right-0 z-30 w-full overflow-y-auto border-l border-white/10 bg-glass/88 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] text-glass-ink transition-transform duration-200 ease-out sm:w-96 ${
+          className={`history-panel fixed inset-y-0 right-0 z-30 w-full overflow-y-auto border-l border-white/10 bg-glass/88 px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-glass-ink transition-transform duration-200 ease-out sm:w-96 ${
             historyOpen
               ? 'translate-x-0'
               : 'pointer-events-none translate-x-full'
           }`}
         >
-          <History sips={sips} now={now} goal={goal} onGoal={changeGoal} />
+          <History
+            sips={sips}
+            now={now}
+            goal={goal}
+            onGoal={changeGoal}
+            onRemove={removeDrink}
+            onClear={clearDrinks}
+            onClose={() => setHistoryOpen(false)}
+          />
         </aside>
-        <button
-          type="button"
-          aria-expanded={historyOpen}
-          aria-controls="drink-history"
-          onClick={() => setHistoryOpen((open) => !open)}
-          className="fixed top-[max(1rem,env(safe-area-inset-top))] right-[max(1.25rem,env(safe-area-inset-right))] z-40 min-h-11 rounded-full bg-glass/78 px-4 text-sm text-glass-ink shadow-[inset_0_0_0_1px_rgb(255_255_255/0.28)] backdrop-blur-sm transition-transform duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-glass-ink"
-        >
-          {historyOpen ? 'Hide' : 'History'}
-        </button>
+        {!historyOpen && (
+          <button
+            ref={historyButtonRef}
+            type="button"
+            aria-expanded={false}
+            aria-controls="drink-history"
+            onClick={() => setHistoryOpen(true)}
+            className="fixed top-[max(1rem,env(safe-area-inset-top))] right-[max(1.25rem,env(safe-area-inset-right))] z-40 min-h-11 rounded-full bg-glass/78 px-4 text-sm text-glass-ink shadow-[inset_0_0_0_1px_rgb(255_255_255/0.28)] backdrop-blur-sm transition-transform duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-glass-ink"
+          >
+            History
+          </button>
+        )}
         <div
           className={`fixed inset-x-0 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex justify-center gap-2 px-4 ${
             historyOpen ? 'max-sm:invisible sm:right-96' : ''

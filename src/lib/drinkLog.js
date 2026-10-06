@@ -58,6 +58,20 @@ export function addSip(at = Date.now(), ml = DEFAULT_ML) {
   return next
 }
 
+export function removeSip(at) {
+  const current = readSips()
+  const index = current.findIndex((sip) => sip.at === at)
+  if (index < 0) return current
+  const next = current.filter((_, position) => position !== index)
+  localStorage.setItem(SIP_KEY, JSON.stringify(next))
+  return next
+}
+
+export function clearSips() {
+  localStorage.setItem(SIP_KEY, '[]')
+  return []
+}
+
 export function readGoal() {
   try {
     const value = Number(localStorage.getItem(GOAL_KEY))
