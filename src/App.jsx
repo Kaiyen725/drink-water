@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import History from './History.jsx'
 import WaterBackground from './WaterBackground.jsx'
 import {
-  DEFAULT_ML,
+  DEFAULT_ML_KEY,
   GOAL_KEY,
   MAX_SIPS,
   QUICK_DRINKS,
@@ -14,9 +14,11 @@ import {
   formatWhen,
   hydrationReminder,
   mlOnDay,
+  readDefaultMl,
   readGoal,
   readSips,
   removeSip,
+  saveDefaultMl,
   saveGoal,
   speakElapsed,
   tideLevel,
@@ -25,6 +27,7 @@ import {
 export default function App() {
   const [sips, setSips] = useState(enforceCap)
   const [goal, setGoal] = useState(readGoal)
+  const [defaultMl, setDefaultMl] = useState(readDefaultMl)
   const [now, setNow] = useState(() => Date.now())
   const [saveError, setSaveError] = useState(false)
   const [notice, setNotice] = useState('')
@@ -79,6 +82,7 @@ export default function App() {
     const onStorage = (event) => {
       if (event.key === SIP_KEY) setSips(readSips())
       if (event.key === GOAL_KEY) setGoal(readGoal())
+      if (event.key === DEFAULT_ML_KEY) setDefaultMl(readDefaultMl())
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -86,10 +90,10 @@ export default function App() {
 
   const last = sips.at(-1) ?? null
   const elapsed = last == null ? null : Math.max(0, now - last.at)
-  const level = tideLevel(elapsed)
   const fresh = elapsed != null && elapsed < 5000
   const reminder = fresh ? null : hydrationReminder(sips, now)
   const todayMl = mlOnDay(sips, now)
+  const level = tideLevel(todayMl / goal)
 
   function rememberTap(event) {
     tapXRef.current = event.clientX / Math.max(window.innerWidth, 1)
@@ -114,6 +118,14 @@ export default function App() {
       setGoal(saveGoal(ml))
     } catch {
       setGoal(ml)
+    }
+  }
+
+  function changeDefault(ml) {
+    try {
+      setDefaultMl(saveDefaultMl(ml))
+    } catch {
+      setDefaultMl(ml)
     }
   }
 
@@ -145,8 +157,8 @@ export default function App() {
 
   const label =
     last == null
-      ? `Log a ${DEFAULT_ML} ml glass. Daily goal ${goal} ml.`
-      : `${reminder ?? `${speakElapsed(elapsed)} since last drink.`} Logged ${formatWhen(last.at, now)}. ${todayMl} of ${goal} ml today. Tap to log a glass.${
+      ? `Log a ${defaultMl} ml glass. Daily goal ${goal} ml.`
+      : `${reminder ?? `${speakElapsed(elapsed)} since last drink.`} Logged ${formatWhen(last.at, now)}. ${todayMl} of ${goal} ml today. Tap to log ${defaultMl} ml.${
           saveError ? " Couldn't save on this device." : ''
         }`
 
@@ -160,7 +172,7 @@ export default function App() {
           onClick={() => {
             const x = tapXRef.current ?? 0.5
             tapXRef.current = null
-            logDrink(DEFAULT_ML, Date.now(), x)
+            logDrink(defaultMl, Date.now(), x)
           }}
           aria-label={label}
           className={`tap-surface group relative z-10 flex min-h-dvh w-full cursor-pointer items-center justify-center bg-transparent px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] text-left outline-none select-none ${
@@ -188,7 +200,7 @@ export default function App() {
               </span>
               <span className="relative mt-2 max-w-[14rem] text-base text-pretty text-glass-muted">
                 {last == null
-                  ? 'Log a drink'
+                  ? `Log ${defaultMl} ml`
                   : fresh
                     ? 'Drink logged'
                     : reminder ?? 'Since last drink'}
@@ -197,7 +209,9 @@ export default function App() {
                 {todayMl.toLocaleString()} of {goal.toLocaleString()} ml
               </span>
               {last != null && !reminder && (
-                <span className="relative mt-4 text-sm">Tap anywhere</span>
+                <span className="relative mt-4 text-sm tabular-nums">
+                  Tap for {defaultMl} ml
+                </span>
               )}
               {saveError && (
                 <span className="relative mt-3 text-sm">
@@ -248,14 +262,18 @@ export default function App() {
             <button
               key={drinkSize.ml}
               type="button"
+              aria-pressed={drinkSize.ml === defaultMl}
               onClick={(event) => {
+                changeDefault(drinkSize.ml)
                 logDrink(
                   drinkSize.ml,
                   Date.now(),
                   event.clientX / Math.max(window.innerWidth, 1),
                 )
               }}
-              className="min-h-11 min-w-16 rounded-full bg-glass/78 px-3 py-1.5 text-glass-ink shadow-[inset_0_0_0_1px_rgb(255_255_255/0.28)] backdrop-blur-sm transition-transform duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-glass-ink"
+              className={`min-h-11 min-w-16 rounded-full px-3 py-1.5 text-glass-ink shadow-[inset_0_0_0_1px_rgb(255_255_255/0.28)] backdrop-blur-sm transition-transform duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-glass-ink ${
+                drinkSize.ml === defaultMl ? 'bg-white/16' : 'bg-glass/78'
+              }`}
             >
               <span className="block text-sm leading-tight">{drinkSize.name}</span>
               <span className="block text-xs tabular-nums text-glass-muted">{drinkSize.ml} ml</span>

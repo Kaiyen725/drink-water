@@ -1,5 +1,6 @@
 export const SIP_KEY = 'drink-water.sips'
 export const GOAL_KEY = 'drink-water.goal'
+export const DEFAULT_ML_KEY = 'drink-water.default-ml'
 export const MAX_SIPS = 50
 export const DEFAULT_ML = 250
 export const DEFAULT_GOAL = 2000
@@ -10,7 +11,6 @@ export const QUICK_DRINKS = [
   { ml: 500, name: 'Bottle' },
 ]
 export const GOAL_OPTIONS = [1500, 2000, 2500, 3000]
-const TIDE_WINDOW_MS = 3 * 60 * 60 * 1000
 const TIDE_CEILING = 0.9
 const TIDE_FLOOR = 0.14
 const DEFAULT_GAP_MS = 45 * 60 * 1000
@@ -87,6 +87,21 @@ export function saveGoal(ml) {
   return next
 }
 
+export function readDefaultMl() {
+  try {
+    const value = Number(localStorage.getItem(DEFAULT_ML_KEY))
+    return QUICK_DRINKS.some((drink) => drink.ml === value) ? value : DEFAULT_ML
+  } catch {
+    return DEFAULT_ML
+  }
+}
+
+export function saveDefaultMl(ml) {
+  const next = QUICK_DRINKS.some((drink) => drink.ml === ml) ? ml : DEFAULT_ML
+  localStorage.setItem(DEFAULT_ML_KEY, String(next))
+  return next
+}
+
 export function mlOnDay(sips, now) {
   const day = startOfDay(now)
   return sips
@@ -124,11 +139,9 @@ export function hydrationReminder(sips, now) {
   return `You haven't had water for ${hourLabel} ${remainder} ${remainder === 1 ? 'minute' : 'minutes'}.`
 }
 
-export function tideLevel(elapsedMs) {
-  if (elapsedMs == null) return TIDE_FLOOR
-  const progress =
-    Math.min(Math.max(elapsedMs, 0), TIDE_WINDOW_MS) / TIDE_WINDOW_MS
-  return TIDE_CEILING - progress * (TIDE_CEILING - TIDE_FLOOR)
+export function tideLevel(progress) {
+  const ratio = Number.isFinite(progress) ? Math.min(Math.max(progress, 0), 1) : 0
+  return TIDE_FLOOR + ratio * (TIDE_CEILING - TIDE_FLOOR)
 }
 
 function unit(count, singular, plural) {
